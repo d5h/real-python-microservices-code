@@ -14,11 +14,14 @@ from infra.service_interceptor import Interceptor, MetricsLogger
 
 SpecialCaseFunction = Callable[[str], str]
 
+
 class DummyService(dummy_pb2_grpc.DummyServiceServicer):
     def __init__(self, special_cases: Dict[str, SpecialCaseFunction]):
         self._special_cases = special_cases
 
-    def Execute(self, request: DummyRequest, context: grpc.ServicerContext) -> DummyResponse:
+    def Execute(
+        self, request: DummyRequest, context: grpc.ServicerContext
+    ) -> DummyResponse:
         inp = request.input
         if inp in self._special_cases:
             output = self._special_cases[inp](inp)
@@ -26,9 +29,15 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
             output = inp
         return DummyResponse(output=output)
 
+
 @contextmanager
-def dummy_client(special_cases: Dict[str, SpecialCaseFunction], interceptors: List[Interceptor]):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1), interceptors=interceptors)
+def dummy_client(
+    special_cases: Dict[str, SpecialCaseFunction],
+    interceptors: List[Interceptor],
+):
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=1), interceptors=interceptors
+    )
     dummy_service = DummyService(special_cases)
     dummy_pb2_grpc.add_DummyServiceServicer_to_server(dummy_service, server)
 
@@ -44,14 +53,15 @@ def dummy_client(special_cases: Dict[str, SpecialCaseFunction], interceptors: Li
     finally:
         server.stop(None)
 
+
 def test_metrics_logger():
     metrics_logger = MetricsLogger()
     interceptors = [metrics_logger]
 
-    special_cases = {
-        "error": lambda r, c: 1 / 0
-    }
-    with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
+    special_cases = {"error": lambda r, c: 1 / 0}
+    with dummy_client(
+        special_cases=special_cases, interceptors=interceptors
+    ) as client:
         assert client.Execute(DummyRequest(input="foo")).output == "foo"
         assert len(metrics_logger.num_calls) == 1
         assert metrics_logger.num_calls["/DummyService/Execute"] == 1

@@ -2,8 +2,8 @@ import abc
 from collections import defaultdict
 import grpc
 
-class Interceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
 
+class Interceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def intercept(self, method, request, context, method_name):
         return method(request, context)
@@ -18,13 +18,19 @@ class Interceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
         def invoke_intercept_method(request, context):
             next_interceptor_or_implementation = next_handler.unary_unary
             method_name = handler_call_details.method
-            return self.intercept(next_interceptor_or_implementation, request, context, method_name)
+            return self.intercept(
+                next_interceptor_or_implementation,
+                request,
+                context,
+                method_name,
+            )
 
         return grpc.unary_unary_rpc_method_handler(
             invoke_intercept_method,
             request_deserializer=next_handler.request_deserializer,
-            response_serializer=next_handler.response_serializer
+            response_serializer=next_handler.response_serializer,
         )
+
 
 class MetricsLogger(Interceptor):
     def __init__(self):
