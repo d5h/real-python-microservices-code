@@ -4,7 +4,6 @@
 FROM python
 
 RUN mkdir /service
-COPY infra/ /service/infra/
 COPY protobufs/ /service/protobufs/
 COPY recommendations/ /service/recommendations/
 COPY ca.pem /service/recommendations/
